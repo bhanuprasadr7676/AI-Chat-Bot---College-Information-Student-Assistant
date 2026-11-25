@@ -1,0 +1,243 @@
+{
+  "entities": {
+    "AdminRecord": {
+      "title": "AdminRecord",
+      "description": "Authorized administrator registry entry.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "email": { "type": "string", "format": "email", "maxLength": 200 },
+        "grantedBy": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "grantedBy", "createdAt"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Authenticated student or admin profile with academic metadata.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "email": { "type": "string", "format": "email", "maxLength": 200 },
+        "displayName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "photoUrl": { "type": "string", "maxLength": 500 },
+        "role": { "type": "string", "enum": ["student", "admin"] },
+        "rollNumber": { "type": "string", "maxLength": 32 },
+        "department": { "type": "string", "maxLength": 100 },
+        "semester": { "type": "integer" },
+        "cgpa": { "type": "number" },
+        "phone": { "type": "string", "maxLength": 32 },
+        "mentorName": { "type": "string", "maxLength": 120 },
+        "isActive": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "displayName", "role", "rollNumber", "department", "semester", "cgpa", "isActive", "createdAt", "updatedAt"]
+    },
+    "AttendanceRecord": {
+      "title": "AttendanceRecord",
+      "description": "Subject-wise attendance record belonging to a specific student.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "subjectCode": { "type": "string", "minLength": 2, "maxLength": 24 },
+        "subjectName": { "type": "string", "minLength": 2, "maxLength": 140 },
+        "facultyName": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "attendedClasses": { "type": "integer" },
+        "totalClasses": { "type": "integer" },
+        "semester": { "type": "integer" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "subjectCode", "subjectName", "facultyName", "attendedClasses", "totalClasses", "semester", "updatedAt"]
+    },
+    "FeeRecord": {
+      "title": "FeeRecord",
+      "description": "Tuition and academic fee item for a student.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "studentName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "title": { "type": "string", "minLength": 2, "maxLength": 140 },
+        "category": { "type": "string", "enum": ["Tuition", "Laboratory", "Examination", "Library", "Hostel"] },
+        "semester": { "type": "integer" },
+        "amount": { "type": "number" },
+        "paidAmount": { "type": "number" },
+        "dueDate": { "type": "string", "maxLength": 32 },
+        "status": { "type": "string", "enum": ["paid", "pending", "overdue"] },
+        "receiptNo": { "type": "string", "maxLength": 64 },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "studentName", "title", "category", "semester", "amount", "paidAmount", "dueDate", "status", "receiptNo", "updatedAt"]
+    },
+    "FacultyMember": {
+      "title": "FacultyMember",
+      "description": "Faculty directory profile and office hours.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "designation": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "department": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "officeEmail": { "type": "string", "maxLength": 160 },
+        "officeRoom": { "type": "string", "maxLength": 64 },
+        "officeHours": { "type": "string", "maxLength": 120 },
+        "specialization": { "type": "string", "maxLength": 160 },
+        "photoUrl": { "type": "string", "maxLength": 500 },
+        "isPublished": { "type": "boolean" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "designation", "department", "officeEmail", "officeRoom", "officeHours", "specialization", "photoUrl", "isPublished", "updatedAt"]
+    },
+    "TimetableSlot": {
+      "title": "TimetableSlot",
+      "description": "Scheduled class period in the academic timetable.",
+      "type": "object",
+      "properties": {
+        "day": { "type": "string", "enum": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"] },
+        "startTime": { "type": "string", "maxLength": 16 },
+        "endTime": { "type": "string", "maxLength": 16 },
+        "courseCode": { "type": "string", "maxLength": 24 },
+        "courseTitle": { "type": "string", "maxLength": 140 },
+        "facultyName": { "type": "string", "maxLength": 120 },
+        "room": { "type": "string", "maxLength": 48 },
+        "department": { "type": "string", "maxLength": 100 },
+        "semester": { "type": "integer" },
+        "isPublished": { "type": "boolean" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["day", "startTime", "endTime", "courseCode", "courseTitle", "facultyName", "room", "department", "semester", "isPublished", "updatedAt"]
+    },
+    "CollegeTiming": {
+      "title": "CollegeTiming",
+      "description": "Operational hours for campus departments and facilities.",
+      "type": "object",
+      "properties": {
+        "facility": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "category": { "type": "string", "enum": ["Academic", "Library", "Administration", "Laboratory", "Student Services"] },
+        "weekdaysHours": { "type": "string", "maxLength": 80 },
+        "weekendHours": { "type": "string", "maxLength": 80 },
+        "location": { "type": "string", "maxLength": 120 },
+        "notes": { "type": "string", "maxLength": 240 },
+        "isPublished": { "type": "boolean" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["facility", "category", "weekdaysHours", "weekendHours", "location", "notes", "isPublished", "updatedAt"]
+    },
+    "NoticeItem": {
+      "title": "NoticeItem",
+      "description": "Official campus notice, circular, or exam announcement.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "minLength": 2, "maxLength": 180 },
+        "category": { "type": "string", "enum": ["Examination", "Academic", "Administration", "Events", "Scholarship"] },
+        "priority": { "type": "string", "enum": ["Normal", "Important", "Urgent"] },
+        "summary": { "type": "string", "maxLength": 400 },
+        "body": { "type": "string", "maxLength": 2500 },
+        "publishedDate": { "type": "string", "maxLength": 32 },
+        "postedBy": { "type": "string", "maxLength": 120 },
+        "isPublished": { "type": "boolean" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "category", "priority", "summary", "body", "publishedDate", "postedBy", "isPublished", "updatedAt"]
+    },
+    "ScholarshipItem": {
+      "title": "ScholarshipItem",
+      "description": "College scholarship and financial grant program.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "minLength": 2, "maxLength": 160 },
+        "provider": { "type": "string", "maxLength": 140 },
+        "amount": { "type": "string", "maxLength": 80 },
+        "eligibility": { "type": "string", "maxLength": 400 },
+        "deadline": { "type": "string", "maxLength": 32 },
+        "category": { "type": "string", "enum": ["Merit", "Need-Based", "Research", "Sports", "STEM"] },
+        "status": { "type": "string", "enum": ["Open", "Closing Soon", "Closed"] },
+        "isPublished": { "type": "boolean" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "provider", "amount", "eligibility", "deadline", "category", "status", "isPublished", "updatedAt"]
+    },
+    "PlacementDrive": {
+      "title": "PlacementDrive",
+      "description": "Campus recruitment drive and placement opportunity.",
+      "type": "object",
+      "properties": {
+        "company": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "role": { "type": "string", "minLength": 2, "maxLength": 140 },
+        "packageLpa": { "type": "string", "maxLength": 64 },
+        "minCgpa": { "type": "number" },
+        "driveDate": { "type": "string", "maxLength": 32 },
+        "location": { "type": "string", "maxLength": 120 },
+        "eligibleBranches": { "type": "string", "maxLength": 200 },
+        "status": { "type": "string", "enum": ["Upcoming", "Registration Open", "Completed"] },
+        "isPublished": { "type": "boolean" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["company", "role", "packageLpa", "minCgpa", "driveDate", "location", "eligibleBranches", "status", "isPublished", "updatedAt"]
+    },
+    "SystemSettings": {
+      "title": "SystemSettings",
+      "description": "Global college portal and AI assistant configuration.",
+      "type": "object",
+      "properties": {
+        "institutionName": { "type": "string", "minLength": 2, "maxLength": 160 },
+        "academicYear": { "type": "string", "maxLength": 32 },
+        "currentSemester": { "type": "string", "maxLength": 40 },
+        "minAttendancePercent": { "type": "integer" },
+        "aiAssistantEnabled": { "type": "boolean" },
+        "strictAcademicMode": { "type": "boolean" },
+        "googleSearchRedirectBase": { "type": "string", "maxLength": 200 },
+        "supportEmail": { "type": "string", "maxLength": 160 },
+        "supportPhone": { "type": "string", "maxLength": 40 },
+        "portalAnnouncement": { "type": "string", "maxLength": 300 },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["institutionName", "academicYear", "currentSemester", "minAttendancePercent", "aiAssistantEnabled", "strictAcademicMode", "googleSearchRedirectBase", "supportEmail", "supportPhone", "portalAnnouncement", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/admins/{uid}": {
+      "schema": { "$ref": "#/entities/AdminRecord" },
+      "description": "Admin role grants keyed by user UID."
+    },
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "User profiles containing PII and academic records."
+    },
+    "/attendance/{recordId}": {
+      "schema": { "$ref": "#/entities/AttendanceRecord" },
+      "description": "Student subject-wise attendance logs."
+    },
+    "/fees/{feeId}": {
+      "schema": { "$ref": "#/entities/FeeRecord" },
+      "description": "Student fee assessments and payment status."
+    },
+    "/faculty/{facultyId}": {
+      "schema": { "$ref": "#/entities/FacultyMember" },
+      "description": "College faculty directory."
+    },
+    "/timetable/{slotId}": {
+      "schema": { "$ref": "#/entities/TimetableSlot" },
+      "description": "Weekly course timetable slots."
+    },
+    "/timings/{timingId}": {
+      "schema": { "$ref": "#/entities/CollegeTiming" },
+      "description": "Campus facility operational hours."
+    },
+    "/notices/{noticeId}": {
+      "schema": { "$ref": "#/entities/NoticeItem" },
+      "description": "Campus notices and announcements."
+    },
+    "/scholarships/{scholarshipId}": {
+      "schema": { "$ref": "#/entities/ScholarshipItem" },
+      "description": "Available college scholarships."
+    },
+    "/placements/{placementId}": {
+      "schema": { "$ref": "#/entities/PlacementDrive" },
+      "description": "Campus placement drives."
+    },
+    "/settings/{settingId}": {
+      "schema": { "$ref": "#/entities/SystemSettings" },
+      "description": "System-wide configuration controlled by admin."
+    }
+  }
+}

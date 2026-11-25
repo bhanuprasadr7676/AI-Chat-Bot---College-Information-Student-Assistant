@@ -1,0 +1,387 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Connection health check
+    match /test/connection {
+      allow get: if true;
+    }
+
+    // --- Global Helpers ---
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isRootAdmin() {
+      return isVerified() && request.auth.token.email == 'bhanuprasadrbhanuprasadr@gmail.com';
+    }
+
+    function isAdmin() {
+      return isRootAdmin() || (isVerified() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+    }
+
+    // --- Validation Blueprints ---
+    function isValidAdminRecord(data) {
+      return data.keys().hasAll(['uid', 'email', 'grantedBy', 'createdAt'])
+        && data.keys().hasOnly(['uid', 'email', 'grantedBy', 'createdAt'])
+        && isValidId(data.uid)
+        && data.email is string && data.email.size() >= 3 && data.email.size() <= 200
+        && data.grantedBy is string && data.grantedBy.size() >= 1 && data.grantedBy.size() <= 128
+        && data.createdAt is timestamp;
+    }
+
+    function isValidUserProfile(data) {
+      return data.keys().hasAll([
+          'uid', 'email', 'displayName', 'role', 'rollNumber',
+          'department', 'semester', 'cgpa', 'isActive', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'uid', 'email', 'displayName', 'photoUrl', 'role', 'rollNumber',
+          'department', 'semester', 'cgpa', 'phone', 'mentorName', 'isActive',
+          'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.uid)
+        && data.email is string && data.email.size() >= 3 && data.email.size() <= 200
+        && data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 120
+        && (!('photoUrl' in data) || (data.photoUrl is string && data.photoUrl.size() <= 500))
+        && data.role in ['student', 'admin']
+        && data.rollNumber is string && data.rollNumber.size() >= 1 && data.rollNumber.size() <= 32
+        && data.department is string && data.department.size() >= 1 && data.department.size() <= 100
+        && data.semester is int && data.semester >= 1 && data.semester <= 12
+        && data.cgpa is number && data.cgpa >= 0 && data.cgpa <= 10
+        && (!('phone' in data) || (data.phone is string && data.phone.size() <= 32))
+        && (!('mentorName' in data) || (data.mentorName is string && data.mentorName.size() <= 120))
+        && data.isActive is bool
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidAttendanceRecord(data) {
+      return data.keys().hasAll([
+          'userId', 'subjectCode', 'subjectName', 'facultyName',
+          'attendedClasses', 'totalClasses', 'semester', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'userId', 'subjectCode', 'subjectName', 'facultyName',
+          'attendedClasses', 'totalClasses', 'semester', 'updatedAt'
+        ])
+        && isValidId(data.userId)
+        && data.subjectCode is string && data.subjectCode.size() >= 2 && data.subjectCode.size() <= 24
+        && data.subjectName is string && data.subjectName.size() >= 2 && data.subjectName.size() <= 140
+        && data.facultyName is string && data.facultyName.size() >= 2 && data.facultyName.size() <= 120
+        && data.attendedClasses is int && data.attendedClasses >= 0
+        && data.totalClasses is int && data.totalClasses >= 0 && data.attendedClasses <= data.totalClasses
+        && data.semester is int && data.semester >= 1 && data.semester <= 12
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidFeeRecord(data) {
+      return data.keys().hasAll([
+          'userId', 'studentName', 'title', 'category', 'semester',
+          'amount', 'paidAmount', 'dueDate', 'status', 'receiptNo', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'userId', 'studentName', 'title', 'category', 'semester',
+          'amount', 'paidAmount', 'dueDate', 'status', 'receiptNo', 'updatedAt'
+        ])
+        && isValidId(data.userId)
+        && data.studentName is string && data.studentName.size() >= 1 && data.studentName.size() <= 120
+        && data.title is string && data.title.size() >= 2 && data.title.size() <= 140
+        && data.category in ['Tuition', 'Laboratory', 'Examination', 'Library', 'Hostel']
+        && data.semester is int && data.semester >= 1 && data.semester <= 12
+        && data.amount is number && data.amount >= 0 && data.amount <= 1000000
+        && data.paidAmount is number && data.paidAmount >= 0 && data.paidAmount <= data.amount
+        && data.dueDate is string && data.dueDate.size() >= 4 && data.dueDate.size() <= 32
+        && data.status in ['paid', 'pending', 'overdue']
+        && data.receiptNo is string && data.receiptNo.size() <= 64
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidFacultyMember(data) {
+      return data.keys().hasAll([
+          'name', 'designation', 'department', 'officeEmail',
+          'officeRoom', 'officeHours', 'specialization', 'photoUrl', 'isPublished', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'name', 'designation', 'department', 'officeEmail',
+          'officeRoom', 'officeHours', 'specialization', 'photoUrl', 'isPublished', 'updatedAt'
+        ])
+        && data.name is string && data.name.size() >= 2 && data.name.size() <= 120
+        && data.designation is string && data.designation.size() >= 2 && data.designation.size() <= 100
+        && data.department is string && data.department.size() >= 2 && data.department.size() <= 100
+        && data.officeEmail is string && data.officeEmail.size() >= 3 && data.officeEmail.size() <= 160
+        && data.officeRoom is string && data.officeRoom.size() >= 1 && data.officeRoom.size() <= 64
+        && data.officeHours is string && data.officeHours.size() >= 2 && data.officeHours.size() <= 120
+        && data.specialization is string && data.specialization.size() >= 2 && data.specialization.size() <= 160
+        && data.photoUrl is string && data.photoUrl.size() <= 500
+        && data.isPublished is bool
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidTimetableSlot(data) {
+      return data.keys().hasAll([
+          'day', 'startTime', 'endTime', 'courseCode', 'courseTitle',
+          'facultyName', 'room', 'department', 'semester', 'isPublished', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'day', 'startTime', 'endTime', 'courseCode', 'courseTitle',
+          'facultyName', 'room', 'department', 'semester', 'isPublished', 'updatedAt'
+        ])
+        && data.day in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+        && data.startTime is string && data.startTime.size() >= 3 && data.startTime.size() <= 16
+        && data.endTime is string && data.endTime.size() >= 3 && data.endTime.size() <= 16
+        && data.courseCode is string && data.courseCode.size() >= 2 && data.courseCode.size() <= 24
+        && data.courseTitle is string && data.courseTitle.size() >= 2 && data.courseTitle.size() <= 140
+        && data.facultyName is string && data.facultyName.size() >= 2 && data.facultyName.size() <= 120
+        && data.room is string && data.room.size() >= 1 && data.room.size() <= 48
+        && data.department is string && data.department.size() >= 2 && data.department.size() <= 100
+        && data.semester is int && data.semester >= 1 && data.semester <= 12
+        && data.isPublished is bool
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidCollegeTiming(data) {
+      return data.keys().hasAll([
+          'facility', 'category', 'weekdaysHours', 'weekendHours',
+          'location', 'notes', 'isPublished', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'facility', 'category', 'weekdaysHours', 'weekendHours',
+          'location', 'notes', 'isPublished', 'updatedAt'
+        ])
+        && data.facility is string && data.facility.size() >= 2 && data.facility.size() <= 120
+        && data.category in ['Academic', 'Library', 'Administration', 'Laboratory', 'Student Services']
+        && data.weekdaysHours is string && data.weekdaysHours.size() >= 2 && data.weekdaysHours.size() <= 80
+        && data.weekendHours is string && data.weekendHours.size() >= 2 && data.weekendHours.size() <= 80
+        && data.location is string && data.location.size() >= 2 && data.location.size() <= 120
+        && data.notes is string && data.notes.size() <= 240
+        && data.isPublished is bool
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidNoticeItem(data) {
+      return data.keys().hasAll([
+          'title', 'category', 'priority', 'summary', 'body',
+          'publishedDate', 'postedBy', 'isPublished', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'title', 'category', 'priority', 'summary', 'body',
+          'publishedDate', 'postedBy', 'isPublished', 'updatedAt'
+        ])
+        && data.title is string && data.title.size() >= 2 && data.title.size() <= 180
+        && data.category in ['Examination', 'Academic', 'Administration', 'Events', 'Scholarship']
+        && data.priority in ['Normal', 'Important', 'Urgent']
+        && data.summary is string && data.summary.size() >= 2 && data.summary.size() <= 400
+        && data.body is string && data.body.size() >= 2 && data.body.size() <= 2500
+        && data.publishedDate is string && data.publishedDate.size() >= 4 && data.publishedDate.size() <= 32
+        && data.postedBy is string && data.postedBy.size() >= 2 && data.postedBy.size() <= 120
+        && data.isPublished is bool
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidScholarshipItem(data) {
+      return data.keys().hasAll([
+          'name', 'provider', 'amount', 'eligibility', 'deadline',
+          'category', 'status', 'isPublished', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'name', 'provider', 'amount', 'eligibility', 'deadline',
+          'category', 'status', 'isPublished', 'updatedAt'
+        ])
+        && data.name is string && data.name.size() >= 2 && data.name.size() <= 160
+        && data.provider is string && data.provider.size() >= 2 && data.provider.size() <= 140
+        && data.amount is string && data.amount.size() >= 1 && data.amount.size() <= 80
+        && data.eligibility is string && data.eligibility.size() >= 2 && data.eligibility.size() <= 400
+        && data.deadline is string && data.deadline.size() >= 4 && data.deadline.size() <= 32
+        && data.category in ['Merit', 'Need-Based', 'Research', 'Sports', 'STEM']
+        && data.status in ['Open', 'Closing Soon', 'Closed']
+        && data.isPublished is bool
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidPlacementDrive(data) {
+      return data.keys().hasAll([
+          'company', 'role', 'packageLpa', 'minCgpa', 'driveDate',
+          'location', 'eligibleBranches', 'status', 'isPublished', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'company', 'role', 'packageLpa', 'minCgpa', 'driveDate',
+          'location', 'eligibleBranches', 'status', 'isPublished', 'updatedAt'
+        ])
+        && data.company is string && data.company.size() >= 2 && data.company.size() <= 120
+        && data.role is string && data.role.size() >= 2 && data.role.size() <= 140
+        && data.packageLpa is string && data.packageLpa.size() >= 1 && data.packageLpa.size() <= 64
+        && data.minCgpa is number && data.minCgpa >= 0 && data.minCgpa <= 10
+        && data.driveDate is string && data.driveDate.size() >= 4 && data.driveDate.size() <= 32
+        && data.location is string && data.location.size() >= 2 && data.location.size() <= 120
+        && data.eligibleBranches is string && data.eligibleBranches.size() >= 2 && data.eligibleBranches.size() <= 200
+        && data.status in ['Upcoming', 'Registration Open', 'Completed']
+        && data.isPublished is bool
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidSystemSettings(data) {
+      return data.keys().hasAll([
+          'institutionName', 'academicYear', 'currentSemester', 'minAttendancePercent',
+          'aiAssistantEnabled', 'strictAcademicMode', 'googleSearchRedirectBase',
+          'supportEmail', 'supportPhone', 'portalAnnouncement', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'institutionName', 'academicYear', 'currentSemester', 'minAttendancePercent',
+          'aiAssistantEnabled', 'strictAcademicMode', 'googleSearchRedirectBase',
+          'supportEmail', 'supportPhone', 'portalAnnouncement', 'updatedAt'
+        ])
+        && data.institutionName is string && data.institutionName.size() >= 2 && data.institutionName.size() <= 160
+        && data.academicYear is string && data.academicYear.size() >= 4 && data.academicYear.size() <= 32
+        && data.currentSemester is string && data.currentSemester.size() >= 2 && data.currentSemester.size() <= 40
+        && data.minAttendancePercent is int && data.minAttendancePercent >= 0 && data.minAttendancePercent <= 100
+        && data.aiAssistantEnabled is bool
+        && data.strictAcademicMode is bool
+        && data.googleSearchRedirectBase is string && data.googleSearchRedirectBase.size() >= 10 && data.googleSearchRedirectBase.size() <= 200
+        && data.supportEmail is string && data.supportEmail.size() >= 3 && data.supportEmail.size() <= 160
+        && data.supportPhone is string && data.supportPhone.size() >= 3 && data.supportPhone.size() <= 40
+        && data.portalAnnouncement is string && data.portalAnnouncement.size() <= 300
+        && data.updatedAt is timestamp;
+    }
+
+    // --- Collection Rules ---
+    match /admins/{uid} {
+      allow get: if isValidId(uid) && (isOwner(uid) || isAdmin());
+      allow list: if isRootAdmin();
+      allow create: if isValidId(uid) && isAdmin() && isValidAdminRecord(incoming()) && incoming().uid == uid && incoming().createdAt == request.time;
+      allow update: if false;
+      allow delete: if isValidId(uid) && isAdmin() && uid != request.auth.uid;
+    }
+
+    match /users/{userId} {
+      allow get: if isValidId(userId) && (isOwner(userId) || isAdmin());
+      allow list: if isRootAdmin();
+      allow create: if isValidId(userId) && isVerified() && isValidUserProfile(incoming())
+        && incoming().uid == userId
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time
+        && (isAdmin() || (isOwner(userId) && incoming().role == 'student'));
+      allow update: if isValidId(userId) && isVerified() && isValidUserProfile(incoming())
+        && incoming().uid == existing().uid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin() ||
+          (isOwner(userId)
+            && incoming().role == existing().role
+            && incoming().isActive == existing().isActive
+            && incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'phone', 'photoUrl', 'department', 'semester', 'updatedAt']))
+        );
+      allow delete: if isValidId(userId) && isAdmin();
+    }
+
+    match /attendance/{recordId} {
+      allow get: if isValidId(recordId) && isVerified() && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isVerified() && (existing().userId == request.auth.uid || isRootAdmin());
+      allow create: if isValidId(recordId) && isAdmin() && isValidAttendanceRecord(incoming()) && incoming().updatedAt == request.time;
+      allow update: if isValidId(recordId) && isAdmin() && isValidAttendanceRecord(incoming())
+        && incoming().userId == existing().userId
+        && incoming().updatedAt == request.time;
+      allow delete: if isValidId(recordId) && isAdmin();
+    }
+
+    match /fees/{feeId} {
+      allow get: if isValidId(feeId) && isVerified() && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isVerified() && (existing().userId == request.auth.uid || isRootAdmin());
+      allow create: if isValidId(feeId) && isAdmin() && isValidFeeRecord(incoming()) && incoming().updatedAt == request.time;
+      allow update: if isValidId(feeId) && isVerified() && isValidFeeRecord(incoming())
+        && incoming().userId == existing().userId
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin() ||
+          (existing().userId == request.auth.uid
+            && existing().status != 'paid'
+            && incoming().status == 'paid'
+            && incoming().paidAmount == existing().amount
+            && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'paidAmount', 'receiptNo', 'updatedAt']))
+        );
+      allow delete: if isValidId(feeId) && isAdmin();
+    }
+
+    match /faculty/{facultyId} {
+      allow get: if isValidId(facultyId) && (existing().isPublished == true || isAdmin());
+      allow list: if existing().isPublished == true || isRootAdmin();
+      allow create: if isValidId(facultyId) && isAdmin() && isValidFacultyMember(incoming()) && incoming().updatedAt == request.time;
+      allow update: if isValidId(facultyId) && isAdmin() && isValidFacultyMember(incoming()) && incoming().updatedAt == request.time;
+      allow delete: if isValidId(facultyId) && isAdmin();
+    }
+
+    match /timetable/{slotId} {
+      allow get: if isValidId(slotId) && (existing().isPublished == true || isAdmin());
+      allow list: if existing().isPublished == true || isRootAdmin();
+      allow create: if isValidId(slotId) && isAdmin() && isValidTimetableSlot(incoming()) && incoming().updatedAt == request.time;
+      allow update: if isValidId(slotId) && isAdmin() && isValidTimetableSlot(incoming()) && incoming().updatedAt == request.time;
+      allow delete: if isValidId(slotId) && isAdmin();
+    }
+
+    match /timings/{timingId} {
+      allow get: if isValidId(timingId) && (existing().isPublished == true || isAdmin());
+      allow list: if existing().isPublished == true || isRootAdmin();
+      allow create: if isValidId(timingId) && isAdmin() && isValidCollegeTiming(incoming()) && incoming().updatedAt == request.time;
+      allow update: if isValidId(timingId) && isAdmin() && isValidCollegeTiming(incoming()) && incoming().updatedAt == request.time;
+      allow delete: if isValidId(timingId) && isAdmin();
+    }
+
+    match /notices/{noticeId} {
+      allow get: if isValidId(noticeId) && (existing().isPublished == true || isAdmin());
+      allow list: if existing().isPublished == true || isRootAdmin();
+      allow create: if isValidId(noticeId) && isAdmin() && isValidNoticeItem(incoming()) && incoming().updatedAt == request.time;
+      allow update: if isValidId(noticeId) && isAdmin() && isValidNoticeItem(incoming()) && incoming().updatedAt == request.time;
+      allow delete: if isValidId(noticeId) && isAdmin();
+    }
+
+    match /scholarships/{scholarshipId} {
+      allow get: if isValidId(scholarshipId) && (existing().isPublished == true || isAdmin());
+      allow list: if existing().isPublished == true || isRootAdmin();
+      allow create: if isValidId(scholarshipId) && isAdmin() && isValidScholarshipItem(incoming()) && incoming().updatedAt == request.time;
+      allow update: if isValidId(scholarshipId) && isAdmin() && isValidScholarshipItem(incoming()) && incoming().updatedAt == request.time;
+      allow delete: if isValidId(scholarshipId) && isAdmin();
+    }
+
+    match /placements/{placementId} {
+      allow get: if isValidId(placementId) && (existing().isPublished == true || isAdmin());
+      allow list: if existing().isPublished == true || isRootAdmin();
+      allow create: if isValidId(placementId) && isAdmin() && isValidPlacementDrive(incoming()) && incoming().updatedAt == request.time;
+      allow update: if isValidId(placementId) && isAdmin() && isValidPlacementDrive(incoming()) && incoming().updatedAt == request.time;
+      allow delete: if isValidId(placementId) && isAdmin();
+    }
+
+    match /settings/{settingId} {
+      allow get: if isValidId(settingId) && settingId == 'campus_config';
+      allow list: if isRootAdmin();
+      allow create: if isValidId(settingId) && settingId == 'campus_config' && isAdmin() && isValidSystemSettings(incoming()) && incoming().updatedAt == request.time;
+      allow update: if isValidId(settingId) && settingId == 'campus_config' && isAdmin() && isValidSystemSettings(incoming()) && incoming().updatedAt == request.time;
+      allow delete: if false;
+    }
+  }
+}

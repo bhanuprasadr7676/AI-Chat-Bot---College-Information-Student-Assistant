@@ -1,0 +1,6 @@
+{
+  "name": "AI Chat Bot - College Information & Student Assistant",
+  "description": "Clean academic dashboard and real-time AI student assistant for schedules, attendance, faculty, timings, notices, fees, scholarships, placements, and full admin control.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
