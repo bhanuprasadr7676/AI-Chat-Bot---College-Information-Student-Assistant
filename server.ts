@@ -482,20 +482,15 @@ async function startServer() {
           }
         }
       }
-
-     
-sendEvent({ type: 'done' });
-res.end();
-} catch (err) {
-  console.error('Gemini API diagnostic error:', err);
-  const info = parseGeminiError(err);
-  sendEvent({ type: 'error', error: info.cleanMessage });
-  res.end();
-}
-
+      sendEvent({ type: 'done' });
+      res.end();
+    } catch (err) {
+      console.error('Gemini API diagnostic error:', err);
+      const info = parseGeminiError(err);
+      sendEvent({ type: 'error', error: info.cleanMessage });
+      res.end();
     }
   });
-
   app.all('/api/*', (_req: Request, res: Response) => {
     res.status(404).json({ error: 'API endpoint not found.' });
   });
