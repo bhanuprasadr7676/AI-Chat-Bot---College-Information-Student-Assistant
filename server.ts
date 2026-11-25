@@ -483,12 +483,16 @@ async function startServer() {
         }
       }
 
-      sendEvent({ type: 'done' });
-      res.end();
-    } catch (err) {
-      const info = parseGeminiError(err);
-      sendEvent({ type: 'error', error: info.cleanMessage });
-      res.end();
+     
+sendEvent({ type: 'done' });
+res.end();
+} catch (err) {
+  console.error('Gemini API diagnostic error:', err);
+  const info = parseGeminiError(err);
+  sendEvent({ type: 'error', error: info.cleanMessage });
+  res.end();
+}
+
     }
   });
 
