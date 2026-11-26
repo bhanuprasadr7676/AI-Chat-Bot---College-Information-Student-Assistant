@@ -386,7 +386,7 @@ async function startServer() {
               break;
             }
             if (info.isTransient && attempt < maxAttempts - 1) {
-              await sleep(450);
+              await sleep(2000 * (attempt + 1));
               continue;
             }
             if (info.isTransient || info.code === 404) {
