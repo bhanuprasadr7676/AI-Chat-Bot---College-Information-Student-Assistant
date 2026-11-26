@@ -86,8 +86,8 @@ function buildSystemInstruction(body: AssistantRequestBody): string {
 }
 
 const MODEL_CANDIDATES: Array<{ model: string; thinkingLevel?: ThinkingLevel }> = [
-  { model: 'gemini-4-hydrogen', thinkingLevel: ThinkingLevel.LOW },
   { model: 'gemini-3.1-flash-lite' },
+  { model: 'gemini-4-hydrogen', thinkingLevel: ThinkingLevel.LOW },
 ];
 
 const modelCooldownUntil = new Map<string, number>();
